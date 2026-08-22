@@ -1,0 +1,132 @@
+<svg viewBox="0 0 1160 800" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#333"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1160" height="800" fill="#ffffff"/>
+  <text x="580" y="30" text-anchor="middle" font-size="20" font-weight="bold" fill="#111">ESP8266 12V LED-Strip Controller — Wiring</text>
+
+  <!-- 12V PSU -->
+  <rect x="40" y="90" width="150" height="70" rx="6" fill="#fde68a" stroke="#92600a" stroke-width="1.5"/>
+  <text x="115" y="120" text-anchor="middle" font-size="14" font-weight="bold">12V Netzteil</text>
+  <text x="115" y="140" text-anchor="middle" font-size="12">(Barrel Jack)</text>
+
+  <!-- 12V rail -->
+  <line x1="190" y1="110" x2="330" y2="110" stroke="#c2410c" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="250" y="102" text-anchor="middle" font-size="11" fill="#c2410c">12V+</text>
+
+  <!-- UBEC -->
+  <rect x="330" y="90" width="140" height="70" rx="6" fill="#bfdbfe" stroke="#1e3a8a" stroke-width="1.5"/>
+  <text x="400" y="118" text-anchor="middle" font-size="14" font-weight="bold">UBEC</text>
+  <text x="400" y="136" text-anchor="middle" font-size="12">12V → 5V</text>
+
+  <!-- 5V rail to D1 mini -->
+  <line x1="470" y1="110" x2="620" y2="110" stroke="#b91c1c" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="545" y="102" text-anchor="middle" font-size="11" fill="#b91c1c">5V</text>
+
+  <!-- D1 mini -->
+  <rect x="620" y="60" width="220" height="220" rx="8" fill="#e0e7ff" stroke="#3730a3" stroke-width="2"/>
+  <text x="730" y="85" text-anchor="middle" font-size="15" font-weight="bold">ESP8266 (Wemos D1 Mini)</text>
+  <text x="640" y="110" font-size="12">5V   ← UBEC 5V</text>
+  <text x="640" y="132" font-size="12">GND  ← gemeinsame Masse</text>
+  <text x="640" y="160" font-size="12">D1 (GPIO5)  → MOSFET Gate</text>
+  <text x="640" y="182" font-size="12">D2 (GPIO4)  → Schalter</text>
+  <text x="640" y="204" font-size="12">D5 (GPIO14) ← Radar TX (RX)</text>
+  <text x="640" y="226" font-size="12">D6 (GPIO12) → Radar RX (TX)</text>
+  <text x="640" y="255" font-size="11" fill="#555">WLAN + OTA (kabellos)</text>
+
+  <!-- 12V rail continues down to LED strip, bypassing ESP -->
+  <line x1="115" y1="160" x2="115" y2="430" stroke="#c2410c" stroke-width="3"/>
+  <line x1="115" y1="430" x2="300" y2="430" stroke="#c2410c" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="180" y="422" text-anchor="middle" font-size="11" fill="#c2410c">12V+</text>
+
+  <!-- LED strip -->
+  <rect x="300" y="400" width="180" height="60" rx="6" fill="#fecaca" stroke="#7f1d1d" stroke-width="1.5"/>
+  <text x="390" y="425" text-anchor="middle" font-size="14" font-weight="bold">12V LED-Strip</text>
+  <text x="390" y="443" text-anchor="middle" font-size="11">V+ / V-</text>
+
+  <!-- LED strip V- to MOSFET drain -->
+  <line x1="480" y1="440" x2="600" y2="440" stroke="#374151" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="540" y="432" text-anchor="middle" font-size="11">V- → Drain</text>
+
+  <!-- MOSFET -->
+  <rect x="600" y="400" width="150" height="90" rx="6" fill="#ddd6fe" stroke="#4c1d95" stroke-width="1.5"/>
+  <text x="675" y="425" text-anchor="middle" font-size="14" font-weight="bold">IRLB8721</text>
+  <text x="675" y="443" text-anchor="middle" font-size="11">Drain (D)</text>
+  <text x="675" y="459" text-anchor="middle" font-size="11">Gate (G)</text>
+  <text x="675" y="475" text-anchor="middle" font-size="11">Source (S) → GND</text>
+
+  <!-- Gate resistor + pulldown -->
+  <line x1="675" y1="196" x2="675" y2="400" stroke="#4c1d95" stroke-width="0" /> <!-- placeholder spacing -->
+  <path d="M730,168 L780,168 L780,458 L750,458" fill="none" stroke="#4c1d95" stroke-width="2"/>
+  <rect x="782" y="152" width="30" height="14" fill="#fff" stroke="#4c1d95"/>
+  <text x="797" y="163" text-anchor="middle" font-size="9">220Ω</text>
+  <rect x="782" y="450" width="30" height="14" fill="#fff" stroke="#4c1d95"/>
+  <text x="797" y="461" text-anchor="middle" font-size="9">10kΩ</text>
+  <line x1="797" y1="464" x2="797" y2="560" stroke="#4c1d95" stroke-width="2"/>
+  <text x="797" y="580" text-anchor="middle" font-size="10" fill="#4c1d95">Pulldown → GND</text>
+  <text x="720" y="200" text-anchor="middle" font-size="10" fill="#4c1d95">D1/GPIO5 → 220Ω → Gate</text>
+
+  <!-- Source to common GND -->
+  <line x1="675" y1="490" x2="675" y2="600" stroke="#111" stroke-width="2.5"/>
+
+  <!-- Common ground bus -->
+  <line x1="70" y1="600" x2="900" y2="600" stroke="#111" stroke-width="3"/>
+  <text x="480" y="618" text-anchor="middle" font-size="12" font-weight="bold">gemeinsame Masse (GND) — PSU / UBEC / ESP / MOSFET Source / LED- / Radar / Schalter</text>
+
+  <!-- PSU GND -->
+  <line x1="70" y1="160" x2="70" y2="600" stroke="#111" stroke-width="2.5"/>
+  <!-- UBEC GND -->
+  <line x1="345" y1="160" x2="345" y2="600" stroke="#111" stroke-width="2"/>
+  <!-- ESP GND -->
+  <line x1="640" y1="280" x2="640" y2="600" stroke="#111" stroke-width="2"/>
+
+  <!-- Radar -->
+  <rect x="900" y="380" width="180" height="90" rx="6" fill="#bbf7d0" stroke="#14532d" stroke-width="1.5"/>
+  <text x="990" y="405" text-anchor="middle" font-size="14" font-weight="bold">HLK-LD2410C</text>
+  <text x="990" y="423" text-anchor="middle" font-size="11">VCC → 5V (UBEC)</text>
+  <text x="990" y="439" text-anchor="middle" font-size="11">GND → gem. Masse</text>
+  <text x="990" y="455" text-anchor="middle" font-size="11">TX/RX ↔ D5/D6</text>
+
+  <!-- Radar to ESP UART lines -->
+  <path d="M900,410 L860,410 L860,220 L840,220" fill="none" stroke="#14532d" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="870" y="315" font-size="10" fill="#14532d" transform="rotate(-90 870,315)">Radar TX → D5 (RX)</text>
+  <path d="M900,440 L880,440 L880,242 L840,242" fill="none" stroke="#14532d" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="892" y="315" font-size="10" fill="#14532d" transform="rotate(-90 892,315)">D6 (TX) → Radar RX</text>
+
+  <!-- Radar 5V -->
+  <line x1="990" y1="380" x2="990" y2="110" stroke="#b91c1c" stroke-width="2"/>
+  <line x1="990" y1="110" x2="840" y2="110" stroke="#b91c1c" stroke-width="0"/>
+  <line x1="990" y1="110" x2="990" y2="110" stroke="#b91c1c" stroke-width="0"/>
+  <path d="M990,380 L990,110 L840,110" fill="none" stroke="#b91c1c" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Radar GND -->
+  <line x1="960" y1="470" x2="960" y2="600" stroke="#111" stroke-width="2"/>
+
+  <!-- Switch -->
+  <rect x="40" y="650" width="160" height="70" rx="6" fill="#fed7aa" stroke="#7c2d12" stroke-width="1.5"/>
+  <text x="120" y="678" text-anchor="middle" font-size="14" font-weight="bold">Schalter</text>
+  <text x="120" y="696" text-anchor="middle" font-size="11">zwischen D2 und GND</text>
+
+  <!-- switch to D2 -->
+  <path d="M120,650 L120,540 L640,540 L640,280" fill="none" stroke="#7c2d12" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="380" y="532" text-anchor="middle" font-size="10" fill="#7c2d12">D2 (GPIO4), INPUT_PULLUP — offen=HIGH, geschlossen=LOW</text>
+
+  <!-- switch to GND -->
+  <line x1="120" y1="720" x2="120" y2="760" stroke="#111" stroke-width="2"/>
+  <line x1="120" y1="760" x2="500" y2="760" stroke="#111" stroke-width="2"/>
+  <line x1="500" y1="760" x2="500" y2="600" stroke="#111" stroke-width="2"/>
+
+  <!-- Legend -->
+  <g font-size="11">
+    <line x1="40" y1="750" x2="70" y2="750" stroke="#c2410c" stroke-width="3"/>
+    <text x="76" y="754">12V</text>
+    <line x1="160" y1="750" x2="190" y2="750" stroke="#b91c1c" stroke-width="2.5"/>
+    <text x="196" y="754">5V</text>
+    <line x1="260" y1="750" x2="290" y2="750" stroke="#14532d" stroke-width="2"/>
+    <text x="296" y="754">UART (3.3V)</text>
+    <line x1="400" y1="750" x2="430" y2="750" stroke="#111" stroke-width="2.5"/>
+    <text x="436" y="754">GND</text>
+  </g>
+</svg>

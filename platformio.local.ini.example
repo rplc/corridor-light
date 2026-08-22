@@ -1,0 +1,8 @@
+[secrets]
+wifi_ssid = 
+wifi_password = 
+ota_password = 
+ota_host = 
+mqtt_server = 
+mqtt_user = 
+mqtt_password = 

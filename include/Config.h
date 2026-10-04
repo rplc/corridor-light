@@ -38,5 +38,26 @@ constexpr uint32_t SWITCH_DEBOUNCE_MS  = 50;
 constexpr uint16_t LED_FADE_MS         = 400;
 constexpr uint8_t  LED_PWM_MAX         = 255;
 
+// Helligkeit (0-100%), mit der der Strip angeht - per MQTT ("brightness")
+// steuerbar, gilt sowohl fuer mode=on als auch fuer radar/switch-Trigger.
+constexpr uint8_t  DEFAULT_BRIGHTNESS_PCT = 100;
+
 // LD2410 UART-Baudrate (Werksvorgabe des Moduls)
 constexpr uint32_t RADAR_BAUD          = 256000;
+
+// ---------------------------------------------------------------------------
+// Radar-Tuning / Debug-Telemetrie
+//
+// RADAR_DEBUG_TELEMETRY schaltet das zusaetzliche Publishen der rohen
+// Radar-Messwerte (Distanz/Energie pro Ziel, aktuelle Gate-Sensitivitaeten)
+// auf einem eigenen Debug-Topic frei. Standardmaessig AUS (0), damit im
+// Normalbetrieb kein unnoetiger MQTT-Traffic entsteht. Zum Fein-Tunen per
+// Build-Flag aktivieren, siehe platformio.ini env "d1_mini_radar_tuning"
+// (-D RADAR_DEBUG_TELEMETRY=1).
+// ---------------------------------------------------------------------------
+#ifndef RADAR_DEBUG_TELEMETRY
+#define RADAR_DEBUG_TELEMETRY 0
+#endif
+
+constexpr const char* MQTT_TOPIC_RADAR_DEBUG   = "hallway-light/radar-debug";
+constexpr uint32_t    RADAR_TELEMETRY_INTERVAL_MS = 1000;

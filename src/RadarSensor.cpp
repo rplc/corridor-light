@@ -17,6 +17,12 @@ void begin() {
     s_radarSerial.begin(RADAR_BAUD);
     if (s_radar.begin(s_radarSerial)) {
         Serial.println("[Radar] LD2410 gefunden und initialisiert.");
+        if (s_radar.requestCurrentConfiguration()) {
+            Serial.printf("[Radar] Konfiguration gelesen: max_gate=%u max_moving_gate=%u max_stationary_gate=%u\n",
+                          s_radar.max_gate, s_radar.max_moving_gate, s_radar.max_stationary_gate);
+        } else {
+            Serial.println("[Radar] Konnte aktuelle Konfiguration nicht lesen.");
+        }
     } else {
         Serial.println("[Radar] LD2410 NICHT gefunden - Verkabelung/Baudrate pruefen.");
     }
@@ -39,6 +45,79 @@ bool presenceHeld() {
         return false;
     }
     return (millis() - s_lastPresenceMs) < RADAR_HOLD_MS;
+}
+
+bool movingTargetDetected() {
+    return s_radar.movingTargetDetected();
+}
+
+uint16_t movingTargetDistanceCm() {
+    return s_radar.movingTargetDistance();
+}
+
+uint8_t movingTargetEnergy() {
+    return s_radar.movingTargetEnergy();
+}
+
+bool stationaryTargetDetected() {
+    return s_radar.stationaryTargetDetected();
+}
+
+uint16_t stationaryTargetDistanceCm() {
+    return s_radar.stationaryTargetDistance();
+}
+
+uint8_t stationaryTargetEnergy() {
+    return s_radar.stationaryTargetEnergy();
+}
+
+uint8_t maxGate() {
+    return s_radar.max_gate;
+}
+
+uint8_t maxMovingGate() {
+    return s_radar.max_moving_gate;
+}
+
+uint8_t maxStationaryGate() {
+    return s_radar.max_stationary_gate;
+}
+
+uint8_t motionSensitivity(uint8_t gate) {
+    if (gate > s_radar.max_gate) return 0;
+    return s_radar.motion_sensitivity[gate];
+}
+
+uint8_t stationarySensitivity(uint8_t gate) {
+    if (gate > s_radar.max_gate) return 0;
+    return s_radar.stationary_sensitivity[gate];
+}
+
+void applyConfig(const RadarConfigRequest& config) {
+    bool anyChange = false;
+
+    if (config.hasMaxValues) {
+        bool ok = s_radar.setMaxValues(config.maxMovingGate, config.maxStationaryGate, config.timeoutSeconds);
+        Serial.printf("[Radar] setMaxValues(moving=%u, stationary=%u, timeout=%us) -> %s\n",
+                      config.maxMovingGate, config.maxStationaryGate, config.timeoutSeconds,
+                      ok ? "OK" : "FEHLER/Timeout");
+        anyChange = true;
+    }
+
+    for (uint8_t i = 0; i < config.gateSensitivityCount; i++) {
+        const RadarGateSensitivity& g = config.gateSensitivity[i];
+        bool ok = s_radar.setGateSensitivity(g.gate, g.moving, g.stationary);
+        Serial.printf("[Radar] setGateSensitivity(gate=%u, moving=%u, stationary=%u) -> %s\n",
+                      g.gate, g.moving, g.stationary, ok ? "OK" : "FEHLER/Timeout");
+        anyChange = true;
+    }
+
+    if (anyChange) {
+        // Cache (max_gate, Sensitivitaets-Arrays, ...) aktualisieren, damit
+        // motionSensitivity()/stationarySensitivity()/maxGate() etc. den
+        // neuen Stand widerspiegeln (z.B. fuer die Debug-Telemetrie).
+        s_radar.requestCurrentConfiguration();
+    }
 }
 
 } // namespace RadarSensor

@@ -66,18 +66,93 @@ dasselbe Topic.
 Steuerkommando (retained empfehlenswert):
 
 ```json
-{ "radar_armed": true, "switch_armed": false, "mode": "auto" }
+{ "radar_armed": true, "switch_armed": false, "mode": "auto", "brightness": 100 }
 ```
 
 - `mode = "on"` / `"off"`: Strip manuell an/aus, radar/switch werden ignoriert.
 - `mode = "auto"`: Strip an, wenn (`radar_armed` UND Radar erkennt Präsenz)
   ODER (`switch_armed` UND Schalter ist offen).
+- `brightness` (0-100, optional): Zielhelligkeit in %, gilt für **jeden**
+  "an"-Zustand (egal ob durch `mode: "on"` oder durch Radar/Switch im
+  `auto`-Modus ausgelöst) — ein einziger Helligkeitsregler statt zweier
+  getrennter Konzepte. Fehlt das Feld, bleibt der zuletzt gesetzte Wert
+  erhalten (Default beim Boot: `DEFAULT_BRIGHTNESS_PCT` in `Config.h`,
+  100%). Änderungen werden weich eingeblendet (`LED_FADE_MS`).
 
 Der ESP ergänzt beim Publishen eigene Felder (`led_on`, `radar_presence`,
 `switch_open`, `ts`), gepublished wird nur bei tatsächlicher Änderung,
 kein periodisches Keepalive. Da der ESP sein eigenes Topic subscribed hat,
 bekommt er seinen Status-Publish auch selbst wieder zugestellt — das ist
-unkritisch, weil dabei nur dieselben `radar_armed`/`switch_armed`/`mode`-
-Werte erneut gesetzt werden (idempotent).
+unkritisch, weil dabei nur dieselben `radar_armed`/`switch_armed`/`mode`/
+`brightness`-Werte erneut gesetzt werden (idempotent).
 
 Client-ID/Topic/Pins lassen sich in `include/Config.h` anpassen.
+
+## Radar fein-tunen (Gate-Sensitivität, Reichweite, Timeout)
+
+Der LD2410 unterteilt die Reichweite in bis zu 9 "Gates" (je ~0,75m) mit
+je einer eigenen Sensitivität (0-100) für bewegte und stehende Ziele.
+Darüber steuert man, ab welcher Signalstärke ("Energie") etwas als
+Präsenz zählt — z.B. um kleine/entfernte Ziele zu ignorieren.
+
+**Konfigurieren per MQTT** (auf dem normalen `hallway-light`-Topic, zusammen
+mit oder unabhängig von den anderen Feldern):
+
+```json
+{
+  "radar_config": {
+    "max_moving_gate": 4,
+    "max_stationary_gate": 4,
+    "timeout_s": 5,
+    "gate_sensitivity": [
+      { "gate": 2, "moving": 60, "stationary": 50 },
+      { "gate": 3, "moving": 70, "stationary": 60 }
+    ]
+  }
+}
+```
+
+- `max_moving_gate` / `max_stationary_gate`: ab welchem Gate bewegte bzw.
+  stehende Ziele ignoriert werden (reduziert effektiv die Reichweite).
+- `timeout_s`: wie lange der Sensor nach dem letzten Ziel noch "Presence"
+  meldet, bevor er auf "kein Ziel" zurückfällt (zusätzlich zum
+  software-seitigen `RADAR_HOLD_MS` in `Config.h`).
+- `gate_sensitivity`: pro Gate `moving`/`stationary` (0-100, höher =
+  unempfindlicher). `max_moving_gate`/`max_stationary_gate` sind nur
+  gemeinsam wirksam (beide Felder nötig), `gate_sensitivity` kann auch
+  allein geschickt werden, mit beliebig vielen Gates im Array.
+
+`radar_config` wird **nicht** dauerhaft gespeichert/retained-relevant
+gehalten, sondern bei Empfang einmalig an den Sensor durchgereicht
+(`RadarSensor::applyConfig`) und taucht nicht im Status-Publish auf.
+
+**Live-Messwerte zum Tuning**: Mit dem Environment `d1_mini_radar_tuning`
+flashen (`pio run -e d1_mini_radar_tuning -t upload`, bzw. die OTA-Variante
+davon ableiten) — das setzt das Build-Flag `RADAR_DEBUG_TELEMETRY=1` und
+published danach alle 1s (`RADAR_TELEMETRY_INTERVAL_MS`) die rohen
+Messwerte auf `hallway-light/radar-debug`:
+
+```json
+{
+  "presence": true,
+  "moving": { "detected": true, "distance_cm": 180, "energy": 72 },
+  "stationary": { "detected": false, "distance_cm": 0, "energy": 0 },
+  "max_gate": 8, "max_moving_gate": 8, "max_stationary_gate": 8,
+  "gate_sensitivity": [ { "gate": 0, "moving": 50, "stationary": 40 }, ... ],
+  "ts": 123456
+}
+```
+
+Damit lässt sich live beobachten, welche `energy`-Werte ein Zielobjekt in
+welcher Distanz erzeugt, und die Sensitivität passend hochdrehen (um
+kleine Ziele auszublenden) oder runterdrehen (um empfindlicher zu werden).
+Danach wieder mit `d1_mini`/`d1_mini_ota` (ohne das Flag) flashen, damit im
+Normalbetrieb kein zusätzlicher MQTT-Traffic anfällt.
+
+**Hinweis zur Zuverlässigkeit:** Der Radar hängt hier über `SoftwareSerial`
+(nicht Hardware-UART) am ESP, bei 256000 Baud laut Lib-Doku eigentlich
+nicht empfohlen. Für die reine Präsenzerkennung reicht das in der Praxis,
+bei den synchronen Konfigurationsbefehlen (`setMaxValues`/
+`setGateSensitivity`) kann es aber vereinzelt zu einem Timeout kommen —
+der Log (`[Radar] setGateSensitivity(...) -> FEHLER/Timeout`) zeigt das,
+einfach das `radar_config`-Kommando erneut schicken.

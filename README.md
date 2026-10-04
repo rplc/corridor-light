@@ -17,7 +17,7 @@ OTA-fähig, dauerhaft im WLAN.
 | Pin        | GPIO | Funktion                          |
 |------------|------|------------------------------------|
 | D1         | 5    | Gate IRLB8721 (über 220R)          |
-| D2         | 4    | Schalter (gegen GND, INPUT_PULLUP) |
+| D2         | 4    | Schalter N.O. (C an GND, INPUT_PULLUP) |
 | D5         | 14   | SoftwareSerial RX ← Radar TX       |
 | D6         | 12   | SoftwareSerial TX → Radar RX       |
 | 5V         | –    | von UBEC (12V→5V)                  |
@@ -50,9 +50,12 @@ ist eine ohmsche/kapazitive, keine induktive Last.
 **Schalter – Pullup/Pulldown nötig?**
 
 Nein, der interne `INPUT_PULLUP` des ESP8266 reicht, kein externer
-Widerstand nötig. Schalter liegt zwischen GPIO und GND:
-offen = HIGH, geschlossen = LOW. Die Firmware entprellt das Signal
-softwareseitig (`SWITCH_DEBOUNCE_MS` in `Config.h`).
+Widerstand nötig. Verwendet wird der **N.O.**-Kontakt (Normally Open):
+**C an GND**, **N.O. an D2**. Damit gilt offen = HIGH, geschlossen = LOW
+— die Firmware entprellt das Signal softwareseitig
+(`SWITCH_DEBOUNCE_MS` in `Config.h`). Würde man stattdessen N.C. (Normally
+Closed) verwenden, kehrt sich die Logik um (offen = LOW) und `isOpen()`
+in `SwitchInput.cpp` müsste invertiert werden.
 
 ## MQTT
 

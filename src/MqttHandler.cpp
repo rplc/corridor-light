@@ -133,6 +133,12 @@ namespace MqttHandler {
 void begin() {
     s_mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
     s_mqttClient.setBufferSize(1024); // radar_config/radar-debug mit gate_sensitivity-Array braucht mehr als die 256B-Default-Puffergroesse
+    // PubSubClient blockiert sonst bis zu MQTT_SOCKET_TIMEOUT (Default 15s!)
+    // in connect(), falls der Broker nicht erreichbar ist. Das friert
+    // loop() lange genug ein, um z.B. ein laufendes OTA-Update
+    // (Antwortfenster nur ~10s) zum Timeout zu bringen. 2s reichen fuer
+    // ein lokales Netz locker.
+    s_mqttClient.setSocketTimeout(2);
     s_mqttClient.setCallback(onMqttMessage);
 }
 

@@ -56,7 +56,11 @@ softwareseitig (`SWITCH_DEBOUNCE_MS` in `Config.h`).
 
 ## MQTT
 
-Steuerkommando (retained empfehlenswert) auf `home/ledstrip1/set`:
+Ein einziges Topic für Kommando und Status: `hallway-light`. Der ESP ist
+darauf subscribed und published seinen eigenen Status (retained) auf
+dasselbe Topic.
+
+Steuerkommando (retained empfehlenswert):
 
 ```json
 { "radar_armed": true, "switch_armed": false, "mode": "auto" }
@@ -66,7 +70,11 @@ Steuerkommando (retained empfehlenswert) auf `home/ledstrip1/set`:
 - `mode = "auto"`: Strip an, wenn (`radar_armed` UND Radar erkennt Präsenz)
   ODER (`switch_armed` UND Schalter ist offen).
 
-Status wird (retained) auf `home/ledstrip1/state` gepublished, bei jeder
-Zustandsänderung sowie alle 30s als Keepalive.
+Der ESP ergänzt beim Publishen eigene Felder (`led_on`, `radar_presence`,
+`switch_open`, `ts`), gepublished wird nur bei tatsächlicher Änderung,
+kein periodisches Keepalive. Da der ESP sein eigenes Topic subscribed hat,
+bekommt er seinen Status-Publish auch selbst wieder zugestellt — das ist
+unkritisch, weil dabei nur dieselben `radar_armed`/`switch_armed`/`mode`-
+Werte erneut gesetzt werden (idempotent).
 
-Topics/Client-ID lassen sich in `include/Config.h` anpassen.
+Client-ID/Topic/Pins lassen sich in `include/Config.h` anpassen.

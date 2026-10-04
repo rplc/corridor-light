@@ -65,7 +65,7 @@ bool tryConnect() {
 
     if (ok) {
         Serial.println(" verbunden.");
-        s_mqttClient.subscribe(MQTT_TOPIC_SET);
+        s_mqttClient.subscribe(MQTT_TOPIC);
     } else {
         Serial.printf(" fehlgeschlagen, rc=%d\n", s_mqttClient.state());
     }
@@ -117,7 +117,7 @@ void publishState(bool ledOn, bool radarPresence, bool switchOpen) {
 
     char buffer[256];
     size_t n = serializeJson(doc, buffer);
-    s_mqttClient.publish(MQTT_TOPIC_STATE, reinterpret_cast<const uint8_t*>(buffer), n, true);
+    s_mqttClient.publish(MQTT_TOPIC, reinterpret_cast<const uint8_t*>(buffer), n, true);
 }
 
 } // namespace MqttHandler

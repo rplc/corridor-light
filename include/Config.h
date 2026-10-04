@@ -20,9 +20,8 @@ constexpr uint8_t PIN_RADAR_TX   = 12;  // D6 -> ESP TX, verbunden mit Radar RX
 #define MQTT_PORT 1883
 #endif
 
-constexpr const char* MQTT_CLIENT_ID    = "esp8266-ledstrip1";
-constexpr const char* MQTT_TOPIC_SET    = "home/ledstrip1/set";
-constexpr const char* MQTT_TOPIC_STATE  = "home/ledstrip1/state";
+constexpr const char* MQTT_CLIENT_ID = "hallway-light";
+constexpr const char* MQTT_TOPIC     = "hallway-light";
 
 // ---------------------------------------------------------------------------
 // Verhalten
@@ -41,7 +40,3 @@ constexpr uint8_t  LED_PWM_MAX         = 255;
 
 // LD2410 UART-Baudrate (Werksvorgabe des Moduls)
 constexpr uint32_t RADAR_BAUD          = 256000;
-
-// Wie oft der State-Topic gepublished wird, auch ohne Aenderung (Keepalive
-// fuer ioBroker o.ae., verhindert "stale" Werte)
-constexpr uint32_t STATE_PUBLISH_INTERVAL_MS = 30000;

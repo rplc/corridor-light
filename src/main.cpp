@@ -10,7 +10,9 @@
 namespace {
 
 bool s_lastPublishedLedOn = false;
-uint32_t s_lastStatePublishMs = 0;
+bool s_lastPublishedPresence = false;
+bool s_lastPublishedSwitchOpen = false;
+bool s_havePublished = false;
 
 // Kernlogik: aus mode + radar_armed/switch_armed + Sensor-Zustaenden den
 // gewuenschten LED-Zustand ableiten.
@@ -56,14 +58,20 @@ void loop() {
     LedController::setOn(desiredOn);
     LedController::loop();
 
-    uint32_t now = millis();
     bool ledOn = LedController::isOn();
-    bool ledChanged = ledOn != s_lastPublishedLedOn;
-    bool intervalElapsed = now - s_lastStatePublishMs >= STATE_PUBLISH_INTERVAL_MS;
+    bool presence = RadarSensor::presenceHeld();
+    bool switchOpen = SwitchInput::isOpen();
 
-    if (MqttHandler::isConnected() && (ledChanged || intervalElapsed)) {
-        MqttHandler::publishState(ledOn, RadarSensor::presenceHeld(), SwitchInput::isOpen());
+    bool changed = !s_havePublished
+                   || ledOn != s_lastPublishedLedOn
+                   || presence != s_lastPublishedPresence
+                   || switchOpen != s_lastPublishedSwitchOpen;
+
+    if (MqttHandler::isConnected() && changed) {
+        MqttHandler::publishState(ledOn, presence, switchOpen);
         s_lastPublishedLedOn = ledOn;
-        s_lastStatePublishMs = now;
+        s_lastPublishedPresence = presence;
+        s_lastPublishedSwitchOpen = switchOpen;
+        s_havePublished = true;
     }
 }

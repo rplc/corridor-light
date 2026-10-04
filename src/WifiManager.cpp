@@ -12,6 +12,9 @@ void begin() {
     WiFi.mode(WIFI_STA);
     WiFi.setAutoReconnect(true);
     WiFi.persistent(true);
+  
+    Serial.print("MAC: ");
+    Serial.println(WiFi.macAddress());
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
     Serial.printf("[WiFi] Verbinde mit \"%s\"", WIFI_SSID);

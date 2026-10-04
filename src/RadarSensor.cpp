@@ -106,7 +106,7 @@ void applyConfig(const RadarConfigRequest& config) {
 
     for (uint8_t i = 0; i < config.gateSensitivityCount; i++) {
         const RadarGateSensitivity& g = config.gateSensitivity[i];
-        bool ok = s_radar.setGateSensitivity(g.gate, g.moving, g.stationary);
+        bool ok = s_radar.setGateSensitivityThreshold(g.gate, g.moving, g.stationary);
         Serial.printf("[Radar] setGateSensitivity(gate=%u, moving=%u, stationary=%u) -> %s\n",
                       g.gate, g.moving, g.stationary, ok ? "OK" : "FEHLER/Timeout");
         anyChange = true;

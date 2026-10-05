@@ -88,6 +88,32 @@ unkritisch, weil dabei nur dieselben `radar_armed`/`switch_armed`/`mode`/
 
 Client-ID/Topic/Pins lassen sich in `include/Config.h` anpassen.
 
+## Logs ohne Serial-Monitor (MQTT-Log)
+
+Wenn ESP + Radar zusammen so viel Strom ziehen, dass ein USB-Port/Kabel
+während des Betriebs nicht mehr ausreicht (Serial-Monitor dann nicht
+nutzbar), gibt es einen zweiten Kanal: **`hallway-light/log`** — nicht
+retained, reiner Live-Stream derselben Zeilen, die auch auf Serial
+stünden (`DebugLog::logf(...)` in `src/DebugLog.*`).
+
+- Jede geloggte Zeile geht **immer** auf Serial (falls vorhanden) UND in
+  einen kleinen internen Puffer (700 Bytes).
+- Sobald MQTT verbunden ist, wird der Puffer in `main.cpp` geleert und auf
+  `hallway-light/log` published.
+- Läuft der Puffer zwischendurch voll (z.B. weil WLAN/MQTT länger nicht
+  verbunden sind), fallen die ältesten Zeilen raus (FIFO) — das ist ein
+  Live-Debug-Werkzeug, kein vollständiges Log.
+- Boot-Meldungen wie `[Radar] LD2410 gefunden...` oder `[Radar] LD2410
+  NICHT gefunden...` entstehen **vor** WiFi/MQTT, landen also zunächst nur
+  im Puffer und werden nachgeliefert, sobald die Verbindung steht.
+- Bewusst **nicht** über diesen Kanal geloggt: alles, was während eines
+  laufenden OTA-Updates passiert (`ArduinoOTA.onStart/onProgress/onError`
+  in `OtaManager.cpp`) — da wollen wir keine zusätzliche Netzwerk-I/O
+  parallel zum Flash-Schreiben riskieren. Diese Meldungen bleiben Serial-only.
+
+Einfach den Topic abonnieren (`mosquitto_sub -t hallway-light/log -v` o.ä.),
+während der ESP ohne USB läuft.
+
 ## Radar fein-tunen (Gate-Sensitivität, Reichweite, Timeout)
 
 Der LD2410 unterteilt die Reichweite in bis zu 9 "Gates" (je ~0,75m) mit
@@ -148,6 +174,16 @@ welcher Distanz erzeugt, und die Sensitivität passend hochdrehen (um
 kleine Ziele auszublenden) oder runterdrehen (um empfindlicher zu werden).
 Danach wieder mit `d1_mini`/`d1_mini_ota` (ohne das Flag) flashen, damit im
 Normalbetrieb kein zusätzlicher MQTT-Traffic anfällt.
+
+**Hinweis zur Lib-Version:** `setGateSensitivity()`/`setMaxValues()` sind
+zwar in der README der `ld2410`-Lib dokumentiert, aber im aktuell neuesten
+Release-Tag (`v0.2.2`) noch nicht enthalten — die README spiegelt bereits
+den `main`-Branch wider. `platformio.ini` hängt die Lib deshalb bewusst
+direkt vom `main`-Branch ab (`https://github.com/ncmreynolds/ld2410.git`)
+statt von einer Registry-Version. Nachteil: `main` kann sich jederzeit
+ändern. Sobald ein Release mit diesen Methoden getaggt ist, auf
+`ncmreynolds/ld2410@^<neue-version>` zurückstellen (siehe Kommentar in
+`platformio.ini`).
 
 **Hinweis zur Zuverlässigkeit:** Der Radar hängt hier über `SoftwareSerial`
 (nicht Hardware-UART) am ESP, bei 256000 Baud laut Lib-Doku eigentlich

@@ -60,6 +60,11 @@ bool consumeRadarConfigRequest(RadarConfigRequest& out);
 // kein periodisches Keepalive.
 void publishState(bool ledOn, bool radarPresence, bool switchOpen);
 
+// Published einen Log-Text (siehe DebugLog) auf MQTT_TOPIC_LOG, NICHT
+// retained (reiner Live-Stream, kein Zustand). Wird von main.cpp
+// aufgerufen, sobald DebugLog::consumePending() etwas liefert.
+void publishLog(const char* text);
+
 #if RADAR_DEBUG_TELEMETRY
 // Nur vorhanden, wenn das Build-Flag RADAR_DEBUG_TELEMETRY=1 gesetzt ist.
 // Published die rohen Radar-Messwerte auf MQTT_TOPIC_RADAR_DEBUG, damit

@@ -23,6 +23,11 @@ constexpr uint8_t PIN_RADAR_TX   = 12;  // D6 -> ESP TX, verbunden mit Radar RX
 constexpr const char* MQTT_CLIENT_ID = "hallway-light";
 constexpr const char* MQTT_TOPIC     = "hallway-light";
 
+// Live-Log-Kanal (siehe DebugLog) - Ersatz fuer den Serial-Monitor, wenn
+// ESP+Radar zusammen zu viel Strom fuer einen schwachen USB-Port ziehen.
+// Nicht retained, reiner Stream.
+constexpr const char* MQTT_TOPIC_LOG = "hallway-light/log";
+
 // ---------------------------------------------------------------------------
 // Verhalten
 // ---------------------------------------------------------------------------

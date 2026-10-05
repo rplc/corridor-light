@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "Config.h"
+#include "DebugLog.h"
 #include "WifiManager.h"
 #include "OtaManager.h"
 #include "MqttHandler.h"
@@ -42,7 +43,8 @@ bool computeDesiredLedState() {
 
 void setup() {
     Serial.begin(115200);
-    Serial.println("\n[Boot] ESP8266 LED-Strip-Controller");
+    DebugLog::begin();
+    DebugLog::logf("[Boot] ESP8266 LED-Strip-Controller");
 
     LedController::begin();   // zuerst: Gate sicher auf LOW ziehen
     SwitchInput::begin();
@@ -99,4 +101,12 @@ void loop() {
         MqttHandler::publishRadarDebug();
     }
 #endif
+
+    // Gepufferte Log-Zeilen (siehe DebugLog) rausschicken, sobald MQTT
+    // verbunden ist - Ersatz fuer den Serial-Monitor, wenn der ohne USB
+    // (Strombudget) nicht nutzbar ist.
+    static char s_logBuffer[700];
+    if (MqttHandler::isConnected() && DebugLog::consumePending(s_logBuffer, sizeof(s_logBuffer))) {
+        MqttHandler::publishLog(s_logBuffer);
+    }
 }

@@ -3,6 +3,7 @@
 #include <SoftwareSerial.h>
 #include <ld2410.h>
 #include "Config.h"
+#include "DebugLog.h"
 
 namespace {
 SoftwareSerial s_radarSerial(PIN_RADAR_RX, PIN_RADAR_TX); // RX, TX
@@ -15,16 +16,20 @@ namespace RadarSensor {
 
 void begin() {
     s_radarSerial.begin(RADAR_BAUD);
+    // Hinweis: begin()/requestCurrentConfiguration() laufen VOR
+    // WiFi/MQTT (siehe main.cpp setup()) - diese Meldungen landen also
+    // erstmal nur im DebugLog-Puffer und werden gesendet, sobald MQTT
+    // steht. Auf Serial stehen sie trotzdem sofort.
     if (s_radar.begin(s_radarSerial)) {
-        Serial.println("[Radar] LD2410 gefunden und initialisiert.");
+        DebugLog::logf("[Radar] LD2410 gefunden und initialisiert.");
         if (s_radar.requestCurrentConfiguration()) {
-            Serial.printf("[Radar] Konfiguration gelesen: max_gate=%u max_moving_gate=%u max_stationary_gate=%u\n",
-                          s_radar.max_gate, s_radar.max_moving_gate, s_radar.max_stationary_gate);
+            DebugLog::logf("[Radar] Konfiguration gelesen: max_gate=%u max_moving_gate=%u max_stationary_gate=%u",
+                           s_radar.max_gate, s_radar.max_moving_gate, s_radar.max_stationary_gate);
         } else {
-            Serial.println("[Radar] Konnte aktuelle Konfiguration nicht lesen.");
+            DebugLog::logf("[Radar] Konnte aktuelle Konfiguration nicht lesen.");
         }
     } else {
-        Serial.println("[Radar] LD2410 NICHT gefunden - Verkabelung/Baudrate pruefen.");
+        DebugLog::logf("[Radar] LD2410 NICHT gefunden - Verkabelung/Baudrate pruefen.");
     }
 }
 
@@ -98,17 +103,17 @@ void applyConfig(const RadarConfigRequest& config) {
 
     if (config.hasMaxValues) {
         bool ok = s_radar.setMaxValues(config.maxMovingGate, config.maxStationaryGate, config.timeoutSeconds);
-        Serial.printf("[Radar] setMaxValues(moving=%u, stationary=%u, timeout=%us) -> %s\n",
-                      config.maxMovingGate, config.maxStationaryGate, config.timeoutSeconds,
-                      ok ? "OK" : "FEHLER/Timeout");
+        DebugLog::logf("[Radar] setMaxValues(moving=%u, stationary=%u, timeout=%us) -> %s",
+                       config.maxMovingGate, config.maxStationaryGate, config.timeoutSeconds,
+                       ok ? "OK" : "FEHLER/Timeout");
         anyChange = true;
     }
 
     for (uint8_t i = 0; i < config.gateSensitivityCount; i++) {
         const RadarGateSensitivity& g = config.gateSensitivity[i];
         bool ok = s_radar.setGateSensitivityThreshold(g.gate, g.moving, g.stationary);
-        Serial.printf("[Radar] setGateSensitivity(gate=%u, moving=%u, stationary=%u) -> %s\n",
-                      g.gate, g.moving, g.stationary, ok ? "OK" : "FEHLER/Timeout");
+        DebugLog::logf("[Radar] setGateSensitivityThreshold(gate=%u, moving=%u, stationary=%u) -> %s",
+                       g.gate, g.moving, g.stationary, ok ? "OK" : "FEHLER/Timeout");
         anyChange = true;
     }
 

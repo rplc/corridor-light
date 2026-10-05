@@ -3,6 +3,7 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include "Config.h"
+#include "DebugLog.h"
 #if RADAR_DEBUG_TELEMETRY
 #include "RadarSensor.h"
 #endif
@@ -82,7 +83,7 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
     JsonDocument doc;
     DeserializationError err = deserializeJson(doc, payload, length);
     if (err) {
-        Serial.printf("[MQTT] JSON-Parsefehler: %s\n", err.c_str());
+        DebugLog::logf("[MQTT] JSON-Parsefehler: %s", err.c_str());
         return;
     }
 
@@ -101,15 +102,14 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
 
     if (parseRadarConfig(doc["radar_config"], s_pendingRadarConfig)) {
         s_hasPendingRadarConfig = true;
-        Serial.println("[MQTT] radar_config empfangen, wird an RadarSensor weitergereicht.");
+        DebugLog::logf("[MQTT] radar_config empfangen, wird an RadarSensor weitergereicht.");
     }
 
-    Serial.printf("[MQTT] Kommando: radar_armed=%d switch_armed=%d mode=%s brightness=%u%%\n",
-                  s_radarArmed, s_switchArmed, modeToString(s_mode), s_brightnessPercent);
+    DebugLog::logf("[MQTT] Kommando: radar_armed=%d switch_armed=%d mode=%s brightness=%u%%",
+                   s_radarArmed, s_switchArmed, modeToString(s_mode), s_brightnessPercent);
 }
 
 bool tryConnect() {
-    Serial.print("[MQTT] Verbinde zum Broker...");
     bool ok;
     if (strlen(MQTT_USER) > 0) {
         ok = s_mqttClient.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD);
@@ -118,10 +118,13 @@ bool tryConnect() {
     }
 
     if (ok) {
-        Serial.println(" verbunden.");
+        DebugLog::logf("[MQTT] Verbinde zum Broker... verbunden.");
         s_mqttClient.subscribe(MQTT_TOPIC);
     } else {
-        Serial.printf(" fehlgeschlagen, rc=%d\n", s_mqttClient.state());
+        // Dieser Fall (Broker nicht erreichbar) kann naturgemaess erst
+        // NACH einer spaeteren erfolgreichen Verbindung per MQTT sichtbar
+        // werden (DebugLog puffert bis dahin) - auf Serial steht er sofort.
+        DebugLog::logf("[MQTT] Verbinde zum Broker... fehlgeschlagen, rc=%d", s_mqttClient.state());
     }
     return ok;
 }
@@ -190,6 +193,13 @@ void publishState(bool ledOn, bool radarPresence, bool switchOpen) {
     char buffer[256];
     size_t n = serializeJson(doc, buffer);
     s_mqttClient.publish(MQTT_TOPIC, reinterpret_cast<const uint8_t*>(buffer), n, true);
+}
+
+void publishLog(const char* text) {
+    if (!s_mqttClient.connected() || text == nullptr) {
+        return;
+    }
+    s_mqttClient.publish(MQTT_TOPIC_LOG, reinterpret_cast<const uint8_t*>(text), strlen(text), false);
 }
 
 #if RADAR_DEBUG_TELEMETRY

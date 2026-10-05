@@ -3,15 +3,14 @@
 // Entprellter Schalter-Input. Verwendet den internen Pullup des ESP8266,
 // keine externen Widerstaende noetig.
 //
-// Verkabelung (SPDT-Schalter, siehe wiring-diagram.svg):
+// Verkabelung (SPDT/Reed-Wechsler):
 //   C (Common)  -> GND
-//   N.O. (Normally Open) -> PIN_SWITCH (D2)
+//   N.C. (Normally Closed) -> PIN_SWITCH (D5)
 // Daraus folgt:
-//   Schalter offen       -> Kontakt zu GND unterbrochen -> Pin liest HIGH
-//   Schalter geschlossen  -> N.O. verbindet mit C/GND    -> Pin liest LOW
+//   Kontakt geschlossen -> NC verbindet mit C/GND -> Pin liest LOW
+//   Kontakt offen       -> NC trennt von GND       -> Pin liest HIGH
 //
-// Wichtig: Haengt stattdessen N.C. (Normally Closed) an PIN_SWITCH, kehrt
-// sich die Logik um (offen=LOW) - dann muesste isOpen() invertiert werden.
+// Damit bleibt isOpen() = HIGH und die Anwendungslogik unveraendert.
 namespace SwitchInput {
 
 void begin();

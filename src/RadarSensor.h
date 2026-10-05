@@ -3,16 +3,10 @@
 #include "RadarTypes.h"
 
 // Wrapper um die ld2410-Lib (ncmreynolds/ld2410) fuer den HLK-LD2410C.
-// Laeuft ueber SoftwareSerial, damit die Hardware-UART (Serial) frei
-// bleibt fuer Debug-Logs.
+// Der Radar laeuft ueber die Hardware-UART0 des ESP8266 mit 256000 Baud.
+// Serial.swap() legt UART0 auf D7/GPIO13 (RX) und D8/GPIO15 (TX).
 //
-// Hinweis: Die Lib empfiehlt eigentlich eine Hardware-UART, da der LD2410
-// mit 256000 Baud kommuniziert - SoftwareSerial ist bei der Baudrate
-// weniger robust. Fuer reine Praesenzerkennung (normaler Betrieb) hat sich
-// das in der Praxis als ausreichend erwiesen; bei den synchronen
-// Konfigurationsbefehlen (setMaxValues/setGateSensitivity) kann es im
-// Zweifel zu einem Timeout kommen - die Rueckgabewerte/Logs zeigen das an,
-// einfach erneut senden.
+// UART1 (Serial1, nur TX) bleibt fuer Debug-Ausgaben reserviert.
 //
 // Liefert zusaetzlich ein "gehaltenes" Praesenz-Signal (presenceHeld()),
 // das nach dem letzten erkannten Ziel noch RADAR_HOLD_MS lang true bleibt,

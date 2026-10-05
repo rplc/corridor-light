@@ -1,12 +1,10 @@
 #include "RadarSensor.h"
 #include <Arduino.h>
-#include <SoftwareSerial.h>
 #include <ld2410.h>
 #include "Config.h"
 #include "DebugLog.h"
 
 namespace {
-SoftwareSerial s_radarSerial(PIN_RADAR_RX, PIN_RADAR_TX); // RX, TX
 ld2410 s_radar;
 uint32_t s_lastPresenceMs = 0;
 bool s_everSeenPresence = false;
@@ -15,12 +13,17 @@ bool s_everSeenPresence = false;
 namespace RadarSensor {
 
 void begin() {
-    s_radarSerial.begin(RADAR_BAUD);
+    // UART0 ist exklusiv fuer den LD2410. Nach Serial.begin() wird er mit
+    // Serial.swap() auf D7/GPIO13 (RX) und D8/GPIO15 (TX) gelegt.
+    // Die Debug-Ausgaben laufen separat ueber Serial1 (siehe DebugLog).
+    Serial.begin(RADAR_BAUD, SERIAL_8N1);
+    Serial.swap();
+
     // Hinweis: begin()/requestCurrentConfiguration() laufen VOR
     // WiFi/MQTT (siehe main.cpp setup()) - diese Meldungen landen also
     // erstmal nur im DebugLog-Puffer und werden gesendet, sobald MQTT
     // steht. Auf Serial stehen sie trotzdem sofort.
-    if (s_radar.begin(s_radarSerial)) {
+    if (s_radar.begin(Serial)) {
         DebugLog::logf("[Radar] LD2410 gefunden und initialisiert.");
         if (s_radar.requestCurrentConfiguration()) {
             DebugLog::logf("[Radar] Konfiguration gelesen: max_gate=%u max_moving_gate=%u max_stationary_gate=%u",

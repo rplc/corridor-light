@@ -15,13 +15,13 @@ void begin() {
     WiFi.persistent(true);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-    Serial.printf("[WiFi] Verbinde mit \"%s\"", WIFI_SSID);
+    Serial1.printf("[WiFi] Verbinde mit \"%s\"", WIFI_SSID);
     uint32_t start = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
         delay(250);
-        Serial.print(".");
+        Serial1.print(".");
     }
-    Serial.println();
+    Serial1.println();
 
     if (WiFi.status() == WL_CONNECTED) {
         DebugLog::logf("[WiFi] Verbunden, IP: %s", WiFi.localIP().toString().c_str());

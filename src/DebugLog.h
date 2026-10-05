@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 
-// Printf-artiger Logger: schreibt IMMER (falls vorhanden) auf Serial UND
+// Printf-artiger Logger: schreibt IMMER (falls vorhanden) auf Serial1 (UART1/D4) UND
 // puffert dieselbe Zeile zusaetzlich in einem kleinen Ringpuffer, damit
 // main.cpp sie bei bestehender MQTT-Verbindung zusaetzlich published
 // (siehe MqttHandler::publishLog / MQTT_TOPIC_LOG).

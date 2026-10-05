@@ -14,17 +14,27 @@ OTA-fähig, dauerhaft im WLAN.
 
 ## Pinbelegung (Wemos D1 Mini)
 
-| Pin        | GPIO | Funktion                          |
-|------------|------|------------------------------------|
-| D1         | 5    | Gate IRLB8721 (über 220R)          |
-| D2         | 4    | Schalter N.O. (C an GND, INPUT_PULLUP) |
-| D5         | 14   | SoftwareSerial RX ← Radar TX       |
-| D6         | 12   | SoftwareSerial TX → Radar RX       |
-| 5V         | –    | von UBEC (12V→5V)                  |
-| GND        | –    | gemeinsame Masse mit PSU/Radar/MOSFET |
+| Pin | GPIO | Funktion |
+|---|---:|---|
+| D1 | 5 | Gate IRLB8721 (über 220R) |
+| D5 | 14 | Reed N.C. (C an GND, INPUT_PULLUP) |
+| D7 | 13 | UART0 RX ← Radar TX (`Serial.swap()`) |
+| D8 | 15 | UART0 TX → Radar RX (`Serial.swap()`) |
+| D4 | 2 | UART1 TX → Debug (optional) |
+| 5V | – | von UBEC (12V→5V) |
+| GND | – | gemeinsame Masse mit PSU/Radar/MOSFET |
 
-Bewusst **keine** Boot-Strapping-Pins (D3/GPIO0, D4/GPIO2, D8/GPIO15) und
-kein D0/GPIO16 verwendet, RX/TX bleiben für den Debug-Serial-Monitor frei.
+Der LD2410 hängt jetzt an der **Hardware-UART0** des ESP8266. `Serial.swap()`
+legt UART0 auf **D7/GPIO13 = RX** und **D8/GPIO15 = TX**. Das ist bei
+256000 Baud deutlich sinnvoller als SoftwareSerial. D8/GPIO15 ist zwar ein
+Boot-Strapping-Pin, muss beim Reset LOW sein und wird auf dem Wemos bereits
+entsprechend beschaltet; der RX-Eingang des Radars ist hochohmig und zieht
+ihn nicht hoch.
+
+Da UART0 damit exklusiv vom Radar verwendet wird, laufen Debug-Ausgaben
+über **UART1 / Serial1 auf D4/GPIO2**. Für den normalen Betrieb wird dieser
+Pin nicht benötigt, weil die Logs zusätzlich über MQTT auf
+`hallway-light/log` ausgegeben werden.
 
 ## Deine Hardware-Fragen
 
@@ -49,13 +59,19 @@ ist eine ohmsche/kapazitive, keine induktive Last.
 
 **Schalter – Pullup/Pulldown nötig?**
 
-Nein, der interne `INPUT_PULLUP` des ESP8266 reicht, kein externer
-Widerstand nötig. Verwendet wird der **N.O.**-Kontakt (Normally Open):
-**C an GND**, **N.O. an D2**. Damit gilt offen = HIGH, geschlossen = LOW
-— die Firmware entprellt das Signal softwareseitig
-(`SWITCH_DEBOUNCE_MS` in `Config.h`). Würde man stattdessen N.C. (Normally
-Closed) verwenden, kehrt sich die Logik um (offen = LOW) und `isOpen()`
-in `SwitchInput.cpp` müsste invertiert werden.
+Nein, der interne `INPUT_PULLUP` des ESP8266 reicht. Verwendet wird der
+**N.C.**-Kontakt (Normally Closed):
+
+- **COM → GND**
+- **NC → D5/GPIO14**
+
+Damit gilt:
+
+- Kontakt geschlossen → GPIO LOW
+- Kontakt offen → GPIO HIGH
+
+Die Firmware interpretiert HIGH als `switch_open=true` und entprellt das
+Signal über `SWITCH_DEBOUNCE_MS`.
 
 ## MQTT
 
@@ -96,7 +112,7 @@ nutzbar), gibt es einen zweiten Kanal: **`hallway-light/log`** — nicht
 retained, reiner Live-Stream derselben Zeilen, die auch auf Serial
 stünden (`DebugLog::logf(...)` in `src/DebugLog.*`).
 
-- Jede geloggte Zeile geht **immer** auf Serial (falls vorhanden) UND in
+- Jede geloggte Zeile geht **immer** auf Serial1/D4 (falls angeschlossen) UND in
   einen kleinen internen Puffer (700 Bytes).
 - Sobald MQTT verbunden ist, wird der Puffer in `main.cpp` geleert und auf
   `hallway-light/log` published.
@@ -109,7 +125,7 @@ stünden (`DebugLog::logf(...)` in `src/DebugLog.*`).
 - Bewusst **nicht** über diesen Kanal geloggt: alles, was während eines
   laufenden OTA-Updates passiert (`ArduinoOTA.onStart/onProgress/onError`
   in `OtaManager.cpp`) — da wollen wir keine zusätzliche Netzwerk-I/O
-  parallel zum Flash-Schreiben riskieren. Diese Meldungen bleiben Serial-only.
+  parallel zum Flash-Schreiben riskieren. Diese Meldungen bleiben Serial1-only.
 
 Einfach den Topic abonnieren (`mosquitto_sub -t hallway-light/log -v` o.ä.),
 während der ESP ohne USB läuft.
@@ -185,10 +201,8 @@ statt von einer Registry-Version. Nachteil: `main` kann sich jederzeit
 `ncmreynolds/ld2410@^<neue-version>` zurückstellen (siehe Kommentar in
 `platformio.ini`).
 
-**Hinweis zur Zuverlässigkeit:** Der Radar hängt hier über `SoftwareSerial`
-(nicht Hardware-UART) am ESP, bei 256000 Baud laut Lib-Doku eigentlich
-nicht empfohlen. Für die reine Präsenzerkennung reicht das in der Praxis,
-bei den synchronen Konfigurationsbefehlen (`setMaxValues`/
-`setGateSensitivity`) kann es aber vereinzelt zu einem Timeout kommen —
-der Log (`[Radar] setGateSensitivity(...) -> FEHLER/Timeout`) zeigt das,
-einfach das `radar_config`-Kommando erneut schicken.
+**Hinweis zur Zuverlässigkeit:** Der Radar hängt jetzt über die
+Hardware-UART0 des ESP8266 bei 256000 Baud. Die `ld2410`-Bibliothek
+bevorzugt für diese hohe Baudrate eine Hardware-UART; SoftwareSerial war
+daher bewusst nur eine Übergangslösung. UART0 wird mit `Serial.swap()` auf
+D7/D8 gelegt, während UART1/`Serial1` auf D4 für Debug-Ausgaben frei bleibt.

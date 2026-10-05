@@ -42,7 +42,7 @@ bool computeDesiredLedState() {
 } // namespace
 
 void setup() {
-    Serial.begin(115200);
+    Serial1.begin(DEBUG_BAUD);
     DebugLog::begin();
     DebugLog::logf("[Boot] ESP8266 LED-Strip-Controller");
 

@@ -59,7 +59,7 @@ void logf(const char* fmt, ...) {
         lineLen = sizeof(line) - 1; // vsnprintf hat schon abgeschnitten
     }
 
-    Serial.println(line);
+    Serial1.println(line);
     appendLine(line, lineLen);
 }
 

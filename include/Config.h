@@ -4,14 +4,23 @@
 // ---------------------------------------------------------------------------
 // Pin-Belegung (Wemos D1 Mini / ESP8266)
 //
-// Bewusst NUR "sichere" GPIOs verwendet (keine Boot-Strapping-Pins
-// D3/GPIO0, D4/GPIO2, D8/GPIO15, kein D0/GPIO16, kein RX/TX-Pin,
-// da Serial fuer Debug-Logs frei bleiben soll).
+// UART0 wird fuer den LD2410 verwendet und per Serial.swap() auf
+// GPIO13/GPIO15 gelegt:
+//   D7/GPIO13 = UART0 RX <- Radar TX
+//   D8/GPIO15 = UART0 TX -> Radar RX
+//
+// D8/GPIO15 ist ein Boot-Strapping-Pin. Der Radar-RX-Eingang ist hochohmig,
+// daher zieht er GPIO15 beim Reset nicht hoch. Der Wemos benoetigt fuer
+// normalen Flash-Boot GPIO15 LOW.
+//
+// Der Debug-Output laeuft separat ueber UART1 (Serial1) auf D4/GPIO2.
+// Der Schalter wurde deshalb von D2 auf D5 verschoben.
 // ---------------------------------------------------------------------------
 constexpr uint8_t PIN_LED_GATE   = 5;   // D1 -> Gate IRLB8721 (ueber 220R)
-constexpr uint8_t PIN_SWITCH     = 4;   // D2 -> Schalter gegen GND, INPUT_PULLUP
-constexpr uint8_t PIN_RADAR_RX   = 14;  // D5 -> ESP RX, verbunden mit Radar TX
-constexpr uint8_t PIN_RADAR_TX   = 12;  // D6 -> ESP TX, verbunden mit Radar RX
+constexpr uint8_t PIN_SWITCH     = 14;  // D5 -> Reed COM/NC, INPUT_PULLUP
+constexpr uint8_t PIN_RADAR_RX   = 13;  // D7/GPIO13 -> UART0 RX <- Radar TX
+constexpr uint8_t PIN_RADAR_TX   = 15;  // D8/GPIO15 -> UART0 TX -> Radar RX
+constexpr uint8_t PIN_DEBUG_TX   = 2;   // D4/GPIO2 -> UART1 TX (optional)
 
 // ---------------------------------------------------------------------------
 // MQTT
@@ -49,6 +58,10 @@ constexpr uint8_t  DEFAULT_BRIGHTNESS_PCT = 100;
 
 // LD2410 UART-Baudrate (Werksvorgabe des Moduls)
 constexpr uint32_t RADAR_BAUD          = 256000;
+
+// Debug-UART (UART1, nur TX auf D4/GPIO2). Die normalen Serial-Logs
+// werden dorthin umgeleitet, weil UART0 exklusiv fuer das Radar arbeitet.
+constexpr uint32_t DEBUG_BAUD          = 115200;
 
 // ---------------------------------------------------------------------------
 // Radar-Tuning / Debug-Telemetrie

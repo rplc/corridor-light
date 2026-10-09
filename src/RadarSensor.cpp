@@ -3,6 +3,7 @@
 #include <ld2410.h>
 #include "Config.h"
 #include "DebugLog.h"
+#include "MqttHandler.h"
 
 namespace {
 ld2410 s_radar;
@@ -52,7 +53,7 @@ bool presenceHeld() {
     if (!s_everSeenPresence) {
         return false;
     }
-    return (millis() - s_lastPresenceMs) < RADAR_HOLD_MS;
+    return (millis() - s_lastPresenceMs) < (static_cast<uint32_t>(MqttHandler::radarTimeoutSeconds()) * 1000UL);
 }
 
 bool movingTargetDetected() {

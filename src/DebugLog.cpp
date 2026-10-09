@@ -60,7 +60,9 @@ void logf(const char* fmt, ...) {
     }
 
     Serial1.println(line);
+#if MQTT_DEBUG_LOG
     appendLine(line, lineLen);
+#endif
 }
 
 bool consumePending(char* out, size_t outSize) {

@@ -70,8 +70,10 @@ Damit gilt:
 - Kontakt geschlossen → GPIO LOW
 - Kontakt offen → GPIO HIGH
 
-Die Firmware interpretiert HIGH als `switch_open=true` und entprellt das
-Signal über `SWITCH_DEBOUNCE_MS`.
+Die Firmware wertet LOW als `switch_triggered=true` und HIGH als inaktiv.
+Ein Kabelbruch ergibt damit HIGH und schaltet das Licht nicht ein. Der Reed
+muss mechanisch so montiert sein, dass die gewünschte Tür-/Schalteraktion den
+NC-Kreis nach GND schließt. Entprellung: `SWITCH_DEBOUNCE_MS`.
 
 ## MQTT
 
@@ -82,25 +84,29 @@ dasselbe Topic.
 Steuerkommando (retained empfehlenswert):
 
 ```json
-{ "radar_armed": true, "switch_armed": false, "mode": "auto", "brightness": 100 }
+{ "radar_armed": true, "switch_armed": false, "mode": "auto", "brightness_forced_on": 100, "brightness_radar": 80, "brightness_switch": 60,
+  "radar_timeout_s": 5 }
 ```
 
 - `mode = "on"` / `"off"`: Strip manuell an/aus, radar/switch werden ignoriert.
-- `mode = "auto"`: Strip an, wenn (`radar_armed` UND Radar erkennt Präsenz)
-  ODER (`switch_armed` UND Schalter ist offen).
-- `brightness` (0-100, optional): Zielhelligkeit in %, gilt für **jeden**
-  "an"-Zustand (egal ob durch `mode: "on"` oder durch Radar/Switch im
-  `auto`-Modus ausgelöst) — ein einziger Helligkeitsregler statt zweier
-  getrennter Konzepte. Fehlt das Feld, bleibt der zuletzt gesetzte Wert
-  erhalten (Default beim Boot: `DEFAULT_BRIGHTNESS_PCT` in `Config.h`,
-  100%). Änderungen werden weich eingeblendet (`LED_FADE_MS`).
+- `mode = "auto"`: Strip an, wenn (`radar_armed` UND Radar-Timeout aktiv)
+  ODER (`switch_armed` UND `switch_triggered`).
+- `brightness_forced_on`, `brightness_radar`, `brightness_switch` (je 0-100):
+  separate Helligkeiten für manuelles `mode: "on"`, Radar- und Switch-Trigger.
+- `radar_timeout_s`: Software-Haltezeit ab der letzten Radar-Präsenzmeldung;
+  nach Ablauf geht das Licht im Auto-Modus weich aus.
+- Beim Boot wartet die Firmware nach dem MQTT-Subscribe kurz auf den retained
+  Control-State. Erst danach publiziert sie ihren Zustand, damit lokale Defaults
+  keine vorhandenen Broker-Einstellungen überschreiben. Gibt es keinen retained
+  Control-State, werden die Defaults verwendet. Änderungen werden weich
+  eingeblendet/ausgeblendet (`LED_FADE_MS`, aktuell ca. 2 Sekunden).
 
 Der ESP ergänzt beim Publishen eigene Felder (`led_on`, `radar_presence`,
-`switch_open`, `ts`), gepublished wird nur bei tatsächlicher Änderung,
+`switch_triggered`, `brightness_active`, `ts`), gepublished wird nur bei tatsächlicher Änderung,
 kein periodisches Keepalive. Da der ESP sein eigenes Topic subscribed hat,
 bekommt er seinen Status-Publish auch selbst wieder zugestellt — das ist
 unkritisch, weil dabei nur dieselben `radar_armed`/`switch_armed`/`mode`/
-`brightness`-Werte erneut gesetzt werden (idempotent).
+Brightness-/Timeout-Werte erneut gesetzt werden (idempotent).
 
 Client-ID/Topic/Pins lassen sich in `include/Config.h` anpassen.
 
@@ -158,7 +164,7 @@ mit oder unabhängig von den anderen Feldern):
   stehende Ziele ignoriert werden (reduziert effektiv die Reichweite).
 - `timeout_s`: wie lange der Sensor nach dem letzten Ziel noch "Presence"
   meldet, bevor er auf "kein Ziel" zurückfällt (zusätzlich zum
-  software-seitigen `RADAR_HOLD_MS` in `Config.h`).
+  software-seitigen `radar_timeout_s` im MQTT-Control-State).
 - `gate_sensitivity`: pro Gate `moving`/`stationary` (0-100, höher =
   unempfindlicher). `max_moving_gate`/`max_stationary_gate` sind nur
   gemeinsam wirksam (beide Felder nötig), `gate_sensitivity` kann auch

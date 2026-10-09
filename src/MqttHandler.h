@@ -47,7 +47,11 @@ bool isConnected();
 bool radarArmed();
 bool switchArmed();
 Mode mode();
-uint8_t brightness();
+uint8_t brightnessForcedOn();
+uint8_t brightnessRadar();
+uint8_t brightnessSwitch();
+uint16_t radarTimeoutSeconds();
+bool controlStateReceived();
 
 // Liefert true und befuellt `out`, wenn seit dem letzten Aufruf ein
 // radar_config-Kommando empfangen wurde (einmalig abzuholen - main.cpp
@@ -58,7 +62,7 @@ bool consumeRadarConfigRequest(RadarConfigRequest& out);
 // Aktuellen Zustand (u.a. ob der Strip gerade an ist) auf MQTT_TOPIC
 // publishen (retained). Wird von main.cpp nur bei Aenderung aufgerufen,
 // kein periodisches Keepalive.
-void publishState(bool ledOn, bool radarPresence, bool switchOpen);
+void publishState(bool ledOn, bool radarPresence, bool switchTriggered, uint8_t activeBrightness);
 
 // Published einen Log-Text (siehe DebugLog) auf MQTT_TOPIC_LOG, NICHT
 // retained (reiner Live-Stream, kein Zustand). Wird von main.cpp

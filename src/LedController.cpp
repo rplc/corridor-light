@@ -3,7 +3,7 @@
 
 namespace {
 bool s_targetOn = false;
-uint8_t s_brightnessPercent = DEFAULT_BRIGHTNESS_PCT;
+uint8_t s_brightnessPercent = DEFAULT_BRIGHTNESS_FORCED_ON_PCT;
 uint8_t s_currentPwm = 0;
 uint32_t s_lastStepMs = 0;
 

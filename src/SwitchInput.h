@@ -10,13 +10,15 @@
 //   Kontakt geschlossen -> NC verbindet mit C/GND -> Pin liest LOW
 //   Kontakt offen       -> NC trennt von GND       -> Pin liest HIGH
 //
-// Damit bleibt isOpen() = HIGH und die Anwendungslogik unveraendert.
+// Die Anwendungslogik verwendet den LOW-Pegel als Trigger. Ein Kabelbruch
+// ergibt HIGH und loest damit kein Licht aus. Den Reed-Kontakt so einsetzen,
+// dass der Kontakt im gewuenschten Triggerzustand nach GND schliesst.
 namespace SwitchInput {
 
 void begin();
 void loop();
 
-// true, wenn der Schalter (entprellt) OFFEN ist -> soll den Strip aktivieren
-bool isOpen();
+// true, wenn der NC-Eingang (entprellt) aktiv LOW ist -> Licht-Trigger
+bool isTriggered();
 
 } // namespace SwitchInput

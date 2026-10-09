@@ -9,7 +9,7 @@
 // UART1 (Serial1, nur TX) bleibt fuer Debug-Ausgaben reserviert.
 //
 // Liefert zusaetzlich ein "gehaltenes" Praesenz-Signal (presenceHeld()),
-// das nach dem letzten erkannten Ziel noch RADAR_HOLD_MS lang true bleibt,
+// das nach dem letzten erkannten Ziel noch radar_timeout_s aus dem MQTT-Control-State lang true bleibt,
 // um Geflacker bei kurzen Aussetzern des Sensors zu vermeiden.
 namespace RadarSensor {
 

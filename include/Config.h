@@ -43,18 +43,19 @@ constexpr const char* MQTT_TOPIC_LOG = "hallway-light/log";
 // Wie lange der Strip nach dem letzten Radar-Trigger noch "an" haelt,
 // bevor er (im auto-Modus) wieder ausgeht. Verhindert Geflacker, wenn der
 // Sensor kurz keine Praesenz mehr meldet.
-constexpr uint32_t RADAR_HOLD_MS       = 5000;
+constexpr uint32_t DEFAULT_RADAR_TIMEOUT_MS = 5000;
 
 // Software-Entprellung fuer den Schalter
 constexpr uint32_t SWITCH_DEBOUNCE_MS  = 50;
 
 // Weiches Ein-/Ausblenden des LED-Streifens (PWM), 0 = hart schalten
-constexpr uint16_t LED_FADE_MS         = 400;
+constexpr uint16_t LED_FADE_MS         = 2000;
 constexpr uint8_t  LED_PWM_MAX         = 255;
 
-// Helligkeit (0-100%), mit der der Strip angeht - per MQTT ("brightness")
-// steuerbar, gilt sowohl fuer mode=on als auch fuer radar/switch-Trigger.
-constexpr uint8_t  DEFAULT_BRIGHTNESS_PCT = 100;
+// Default-Helligkeiten (0-100%) fuer die drei Ausloeser.
+constexpr uint8_t DEFAULT_BRIGHTNESS_FORCED_ON_PCT = 100;
+constexpr uint8_t DEFAULT_BRIGHTNESS_RADAR_PCT = 100;
+constexpr uint8_t DEFAULT_BRIGHTNESS_SWITCH_PCT = 100;
 
 // LD2410 UART-Baudrate (Werksvorgabe des Moduls)
 constexpr uint32_t RADAR_BAUD          = 256000;
@@ -75,6 +76,16 @@ constexpr uint32_t DEBUG_BAUD          = 115200;
 // ---------------------------------------------------------------------------
 #ifndef RADAR_DEBUG_TELEMETRY
 #define RADAR_DEBUG_TELEMETRY 0
+#endif
+
+// MQTT_DEBUG_LOG schaltet das Weiterleiten der normalen Debug-/Log-Meldungen
+// (DebugLog) an MQTT_TOPIC_LOG frei. Die Ausgabe ueber Serial1 bleibt davon
+// unberuehrt. Standardmaessig AUS (0), damit im Produktivbetrieb kein
+// zusaetzlicher MQTT-Traffic und kein Log-Puffer benoetigt wird.
+// Zum Debuggen per Build-Flag aktivieren:
+//   -D MQTT_DEBUG_LOG=1
+#ifndef MQTT_DEBUG_LOG
+#define MQTT_DEBUG_LOG 0
 #endif
 
 constexpr const char* MQTT_TOPIC_RADAR_DEBUG   = "hallway-light/radar-debug";

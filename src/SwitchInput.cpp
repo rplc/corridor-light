@@ -3,8 +3,8 @@
 #include "Config.h"
 
 namespace {
-bool s_debouncedOpen = true; // Default: offen (HIGH), passend zu INPUT_PULLUP
-bool s_lastRawOpen = true;
+bool s_debouncedTriggered = false;
+bool s_lastRawTriggered = false;
 uint32_t s_lastChangeMs = 0;
 } // namespace
 
@@ -12,26 +12,26 @@ namespace SwitchInput {
 
 void begin() {
     pinMode(PIN_SWITCH, INPUT_PULLUP);
-    s_debouncedOpen = digitalRead(PIN_SWITCH) == HIGH;
-    s_lastRawOpen = s_debouncedOpen;
+    s_debouncedTriggered = digitalRead(PIN_SWITCH) == LOW;
+    s_lastRawTriggered = s_debouncedTriggered;
 }
 
 void loop() {
-    bool rawOpen = digitalRead(PIN_SWITCH) == HIGH;
+    bool rawTriggered = digitalRead(PIN_SWITCH) == LOW;
     uint32_t now = millis();
 
-    if (rawOpen != s_lastRawOpen) {
-        s_lastRawOpen = rawOpen;
+    if (rawTriggered != s_lastRawTriggered) {
+        s_lastRawTriggered = rawTriggered;
         s_lastChangeMs = now;
     }
 
-    if (rawOpen != s_debouncedOpen && (now - s_lastChangeMs) >= SWITCH_DEBOUNCE_MS) {
-        s_debouncedOpen = rawOpen;
+    if (rawTriggered != s_debouncedTriggered && (now - s_lastChangeMs) >= SWITCH_DEBOUNCE_MS) {
+        s_debouncedTriggered = rawTriggered;
     }
 }
 
-bool isOpen() {
-    return s_debouncedOpen;
+bool isTriggered() {
+    return s_debouncedTriggered;
 }
 
 } // namespace SwitchInput

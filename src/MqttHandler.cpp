@@ -15,13 +15,18 @@ PubSubClient s_mqttClient(s_wifiClient);
 
 bool s_radarArmed = false;
 bool s_switchArmed = false;
+bool s_controlStateReceived = false;
 MqttHandler::Mode s_mode = MqttHandler::Mode::Off;
-uint8_t s_brightnessPercent = DEFAULT_BRIGHTNESS_PCT;
+uint8_t s_brightnessForcedOn = DEFAULT_BRIGHTNESS_FORCED_ON_PCT;
+uint8_t s_brightnessRadar = DEFAULT_BRIGHTNESS_RADAR_PCT;
+uint8_t s_brightnessSwitch = DEFAULT_BRIGHTNESS_SWITCH_PCT;
+uint16_t s_radarTimeoutSeconds = DEFAULT_RADAR_TIMEOUT_MS / 1000;
 
 bool s_hasPendingRadarConfig = false;
 RadarConfigRequest s_pendingRadarConfig;
 
 uint32_t s_lastReconnectAttempt = 0;
+uint32_t s_connectedAtMs = 0;
 constexpr uint32_t RECONNECT_INTERVAL_MS = 5000;
 
 MqttHandler::Mode parseMode(const char* raw) {
@@ -96,17 +101,26 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
     if (doc["mode"].is<const char*>()) {
         s_mode = parseMode(doc["mode"].as<const char*>());
     }
-    if (doc["brightness"].is<int>()) {
-        s_brightnessPercent = clampPercent(doc["brightness"].as<long>());
+    if (doc["brightness_forced_on"].is<int>()) s_brightnessForcedOn = clampPercent(doc["brightness_forced_on"].as<long>());
+    if (doc["brightness_radar"].is<int>()) s_brightnessRadar = clampPercent(doc["brightness_radar"].as<long>());
+    if (doc["brightness_switch"].is<int>()) s_brightnessSwitch = clampPercent(doc["brightness_switch"].as<long>());
+    if (doc["radar_timeout_s"].is<int>()) {
+        long timeout = doc["radar_timeout_s"].as<long>();
+        if (timeout < 1) timeout = 1;
+        if (timeout > 3600) timeout = 3600;
+        s_radarTimeoutSeconds = static_cast<uint16_t>(timeout);
     }
+    // Erst nach Empfang des retained Control-States darf der ESP seinen
+    // Zustand publizieren, sonst koennte er Broker-Einstellungen ueberschreiben.
+    s_controlStateReceived = true;
 
     if (parseRadarConfig(doc["radar_config"], s_pendingRadarConfig)) {
         s_hasPendingRadarConfig = true;
         DebugLog::logf("[MQTT] radar_config empfangen, wird an RadarSensor weitergereicht.");
     }
 
-    DebugLog::logf("[MQTT] Kommando: radar_armed=%d switch_armed=%d mode=%s brightness=%u%%",
-                   s_radarArmed, s_switchArmed, modeToString(s_mode), s_brightnessPercent);
+    DebugLog::logf("[MQTT] Control: radar_armed=%d switch_armed=%d mode=%s brightness=%u/%u/%u timeout=%us",
+                   s_radarArmed, s_switchArmed, modeToString(s_mode), s_brightnessForcedOn, s_brightnessRadar, s_brightnessSwitch, s_radarTimeoutSeconds);
 }
 
 bool tryConnect() {
@@ -120,6 +134,7 @@ bool tryConnect() {
     if (ok) {
         DebugLog::logf("[MQTT] Verbinde zum Broker... verbunden.");
         s_mqttClient.subscribe(MQTT_TOPIC);
+        s_connectedAtMs = millis();
     } else {
         // Dieser Fall (Broker nicht erreichbar) kann naturgemaess erst
         // NACH einer spaeteren erfolgreichen Verbindung per MQTT sichtbar
@@ -155,6 +170,12 @@ void loop() {
         return;
     }
     s_mqttClient.loop();
+    // retained Control-State nach Subscribe abwarten. Falls noch keiner
+    // existiert, nach kurzer Frist mit den lokalen Defaults starten.
+    if (!s_controlStateReceived && millis() - s_connectedAtMs >= 1000) {
+        s_controlStateReceived = true;
+        DebugLog::logf("[MQTT] Kein retained Control-State empfangen; verwende Defaults.");
+    }
 }
 
 bool isConnected() {
@@ -164,7 +185,11 @@ bool isConnected() {
 bool radarArmed() { return s_radarArmed; }
 bool switchArmed() { return s_switchArmed; }
 Mode mode() { return s_mode; }
-uint8_t brightness() { return s_brightnessPercent; }
+uint8_t brightnessForcedOn() { return s_brightnessForcedOn; }
+uint8_t brightnessRadar() { return s_brightnessRadar; }
+uint8_t brightnessSwitch() { return s_brightnessSwitch; }
+uint16_t radarTimeoutSeconds() { return s_radarTimeoutSeconds; }
+bool controlStateReceived() { return s_controlStateReceived; }
 
 bool consumeRadarConfigRequest(RadarConfigRequest& out) {
     if (!s_hasPendingRadarConfig) {
@@ -175,18 +200,22 @@ bool consumeRadarConfigRequest(RadarConfigRequest& out) {
     return true;
 }
 
-void publishState(bool ledOn, bool radarPresence, bool switchOpen) {
+void publishState(bool ledOn, bool radarPresence, bool switchTriggered, uint8_t activeBrightness) {
     if (!s_mqttClient.connected()) {
         return;
     }
 
     JsonDocument doc;
     doc["led_on"] = ledOn;
-    doc["brightness"] = s_brightnessPercent;
+    doc["brightness_forced_on"] = s_brightnessForcedOn;
+    doc["brightness_radar"] = s_brightnessRadar;
+    doc["brightness_switch"] = s_brightnessSwitch;
+    doc["radar_timeout_s"] = s_radarTimeoutSeconds;
+    doc["brightness_active"] = activeBrightness;
     doc["radar_armed"] = s_radarArmed;
     doc["radar_presence"] = radarPresence;
     doc["switch_armed"] = s_switchArmed;
-    doc["switch_open"] = switchOpen;
+    doc["switch_triggered"] = switchTriggered;
     doc["mode"] = modeToString(s_mode);
     doc["ts"] = millis();
 
@@ -196,10 +225,14 @@ void publishState(bool ledOn, bool radarPresence, bool switchOpen) {
 }
 
 void publishLog(const char* text) {
+#if MQTT_DEBUG_LOG
     if (!s_mqttClient.connected() || text == nullptr) {
         return;
     }
     s_mqttClient.publish(MQTT_TOPIC_LOG, reinterpret_cast<const uint8_t*>(text), strlen(text), false);
+#else
+    (void)text;
+#endif
 }
 
 #if RADAR_DEBUG_TELEMETRY

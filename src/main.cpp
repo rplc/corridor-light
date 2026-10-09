@@ -13,7 +13,7 @@ namespace {
 
 bool s_lastPublishedLedOn = false;
 bool s_lastPublishedPresence = false;
-bool s_lastPublishedSwitchOpen = false;
+bool s_lastPublishedSwitchTriggered = false;
 uint8_t s_lastPublishedBrightness = 0;
 bool s_havePublished = false;
 
@@ -33,7 +33,7 @@ bool computeDesiredLedState() {
         case Mode::Auto:
         default: {
             bool byRadar  = MqttHandler::radarArmed() && RadarSensor::presenceHeld();
-            bool bySwitch = MqttHandler::switchArmed() && SwitchInput::isOpen();
+            bool bySwitch = MqttHandler::switchArmed() && SwitchInput::isTriggered();
             return byRadar || bySwitch;
         }
     }
@@ -69,27 +69,36 @@ void loop() {
         RadarSensor::applyConfig(radarConfig);
     }
 
+    // Der Radar-Timeout wird vom RadarSensor::presenceHeld() verwendet.
+    // Helligkeit nach dem aktiven Ausloeser waehlen (Forced-On hat Vorrang).
+    bool switchTriggered = SwitchInput::isTriggered();
+    bool radarTriggered = MqttHandler::radarArmed() && RadarSensor::presenceHeld();
+    uint8_t activeBrightness = MqttHandler::brightnessForcedOn();
+    if (MqttHandler::mode() == MqttHandler::Mode::Auto) {
+        if (switchTriggered && MqttHandler::switchArmed()) activeBrightness = MqttHandler::brightnessSwitch();
+        else if (radarTriggered) activeBrightness = MqttHandler::brightnessRadar();
+    }
     bool desiredOn = computeDesiredLedState();
-    LedController::setBrightness(MqttHandler::brightness());
+    LedController::setBrightness(activeBrightness);
     LedController::setOn(desiredOn);
     LedController::loop();
 
     bool ledOn = LedController::isOn();
     bool presence = RadarSensor::presenceHeld();
-    bool switchOpen = SwitchInput::isOpen();
+    bool switchOpen = switchTriggered;
     uint8_t brightness = LedController::brightness();
 
     bool changed = !s_havePublished
                    || ledOn != s_lastPublishedLedOn
                    || presence != s_lastPublishedPresence
-                   || switchOpen != s_lastPublishedSwitchOpen
+                   || switchOpen != s_lastPublishedSwitchTriggered
                    || brightness != s_lastPublishedBrightness;
 
-    if (MqttHandler::isConnected() && changed) {
-        MqttHandler::publishState(ledOn, presence, switchOpen);
+    if (MqttHandler::isConnected() && MqttHandler::controlStateReceived() && changed) {
+        MqttHandler::publishState(ledOn, presence, switchOpen, activeBrightness);
         s_lastPublishedLedOn = ledOn;
         s_lastPublishedPresence = presence;
-        s_lastPublishedSwitchOpen = switchOpen;
+        s_lastPublishedSwitchTriggered = switchOpen;
         s_lastPublishedBrightness = brightness;
         s_havePublished = true;
     }
@@ -102,6 +111,7 @@ void loop() {
     }
 #endif
 
+#if MQTT_DEBUG_LOG
     // Gepufferte Log-Zeilen (siehe DebugLog) rausschicken, sobald MQTT
     // verbunden ist - Ersatz fuer den Serial-Monitor, wenn der ohne USB
     // (Strombudget) nicht nutzbar ist.
@@ -109,4 +119,5 @@ void loop() {
     if (MqttHandler::isConnected() && DebugLog::consumePending(s_logBuffer, sizeof(s_logBuffer))) {
         MqttHandler::publishLog(s_logBuffer);
     }
+#endif
 }
